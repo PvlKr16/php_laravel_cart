@@ -17,7 +17,7 @@
     @if($variant)
         <button onclick="addToCart({{ $variant->id }})"
                 style="padding:8px 12px; cursor:pointer;">
-            В корзину
+            Add to cart
         </button>
     @else
         <p style="color:#999;">No items</p>
