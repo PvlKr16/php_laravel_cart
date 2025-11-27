@@ -2,21 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Lunar\Models\Product;
 
 class ProductController extends Controller
 {
     public function index()
     {
-        // Подгружаем продукты — адаптируй, если у тебя другой способ
-        $products = Product::with('variants.prices')->get();
-        return view('products.index', compact('products'));
-    }
+        $products = Product::with([
+            'variants.prices'
+        ])
+            ->where('status', 'published')
+            ->get();
 
-    public function show(Product $product)
-    {
-        $product->load('variants.prices');
-        return view('products.show', compact('product'));
+        return view('products.index', compact('products'));
     }
 }

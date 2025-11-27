@@ -3,101 +3,96 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Lunar\Base\CartSessionInterface;
 use Lunar\Models\ProductVariant;
+use Lunar\Models\Price;
 
 class CartController extends Controller
 {
-    protected CartSessionInterface $cartSession;
-
-    public function __construct(CartSessionInterface $cartSession)
+    public function show()
     {
-        $this->cartSession = $cartSession;
-    }
+        $cart = session()->get('cart', []);
 
-    public function get()
-    {
-        $cart = $this->cartSession->current();
+        $items = [];
+        $total = 0;
 
-        if (! $cart) {
-            return response()->json(['items' => [], 'total' => 0]);
-        }
+        foreach ($cart as $lineId => $line) {
 
-        $items = $cart->lines->map(function ($line) {
-            return [
-                'id' => $line->id,
-                'quantity' => $line->quantity,
-                'subtotal' => $line->subTotal?->formatted ?? ($line->subTotal?->value ?? null),
-                'total' => $line->total?->formatted ?? ($line->total?->value ?? null),
-                'product' => [
-                    'name' => $line->purchasable->product->translate('name') ?? $line->purchasable->name,
-                    'thumbnail' => $line->purchasable->thumbnail?->getUrl() ?? null,
+            $variant = ProductVariant::with('product', 'prices')->find($line['variant_id']);
+            if (!$variant) continue;
+
+            $price = $variant->prices->first();
+            $lineTotal = $price->price->decimal * $line['quantity'];
+
+            $items[] = [
+                'id'       => $lineId,
+                'variant_id' => $variant->id,
+                'quantity' => $line['quantity'],
+                'product'  => [
+                    'name' => $variant->product->translateAttribute('name'),
+                    'thumbnail' => null,
                 ],
+                'total'    => '$' . number_format($lineTotal, 2),
             ];
-        })->values();
 
-        $total = $cart->total?->formatted ?? ($cart->total?->value ?? 0);
+            $total += $lineTotal;
+        }
 
         return response()->json([
             'items' => $items,
-            'total' => $total,
+            'total' => '$' . number_format($total, 2),
         ]);
     }
 
     public function add(Request $request)
     {
-        $data = $request->validate([
-            'variant_id' => 'required|integer',
-            'quantity' => 'sometimes|integer|min:1',
-        ]);
+        $variantId = $request->variant_id;
 
-        $variant = ProductVariant::find($data['variant_id']);
-
-        if (! $variant) {
-            return response()->json(['error' => 'Variant not found'], 404);
+        if (!$variantId) {
+            return response()->json(['error' => 'variant_id missing'], 400);
         }
 
-        $this->cartSession->manager()->add($variant, $data['quantity'] ?? 1);
+        $cart = session()->get('cart', []);
 
-        return $this->get();
+        $lineId = uniqid();
+
+        $cart[$lineId] = [
+            'variant_id' => $variantId,
+            'quantity'   => 1,
+        ];
+
+        session()->put('cart', $cart);
+
+        return response()->json(['success' => true]);
     }
 
     public function update(Request $request)
     {
-        $data = $request->validate([
-            'line_id' => 'required',
-            'quantity' => 'required|integer|min:1',
-        ]);
+        $lineId = $request->line_id;
+        $qty    = (int)$request->quantity;
 
-        $cart = $this->cartSession->current();
+        $cart = session()->get('cart', []);
 
-        $line = $cart->lines->where('id', $data['line_id'])->first();
-
-        if (! $line) {
-            return response()->json(['error' => 'Line not found'], 404);
+        if (!isset($cart[$lineId])) {
+            return response()->json(['error' => 'line not found'], 404);
         }
 
-        $this->cartSession->manager()->updateLine($line, $data['quantity']);
+        $cart[$lineId]['quantity'] = max(1, $qty);
 
-        return $this->get();
+        session()->put('cart', $cart);
+
+        return response()->json(['success' => true]);
     }
 
     public function remove(Request $request)
     {
-        $data = $request->validate([
-            'line_id' => 'required'
-        ]);
+        $lineId = $request->line_id;
 
-        $cart = $this->cartSession->current();
+        $cart = session()->get('cart', []);
 
-        $line = $cart->lines->where('id', $data['line_id'])->first();
+        unset($cart[$lineId]);
 
-        if (! $line) {
-            return response()->json(['error' => 'Line not found'], 404);
-        }
+        session()->put('cart', $cart);
 
-        $this->cartSession->manager()->removeLine($line);
-
-        return $this->get();
+        return response()->json(['success' => true]);
     }
 }

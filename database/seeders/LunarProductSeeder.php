@@ -18,7 +18,7 @@ class LunarProductSeeder extends Seeder
     public function run()
     {
         /**
-         * 1. Валюта
+         * 1. Currency
          */
         $currency = Currency::first() ?? Currency::create([
             'name' => 'US Dollar',
@@ -37,7 +37,7 @@ class LunarProductSeeder extends Seeder
         ]);
 
         /**
-         * 3. AttributeGroup (обязательные поля)
+         * 3. AttributeGroup (all required)
          */
         $group = AttributeGroup::first() ?? AttributeGroup::create([
             'name' => 'Product Main Data',
@@ -47,7 +47,7 @@ class LunarProductSeeder extends Seeder
         ]);
 
         /**
-         * 4. Атрибуты (все обязательные поля)
+         * 4. Attributes (all required)
          */
         $attributes = [
             [
@@ -81,7 +81,7 @@ class LunarProductSeeder extends Seeder
                     'position' => $attr['position'],
                     'required' => false,
                     'configuration' => [],
-                    'system' => false,   // ← ⚡ ДОБАВЛЕНО
+                    'system' => false,
                 ]
             );
 
@@ -121,7 +121,7 @@ class LunarProductSeeder extends Seeder
             'default' => true,
         ]);
 
-// 2. Создаем вариант
+// 2. Variant creation
         $variant = ProductVariant::create([
             'product_id' => $product->id,
             'sku' => 'TEST-001',

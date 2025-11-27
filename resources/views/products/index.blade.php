@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <h1>Каталог</h1>
+    <h2>Goods Catalogue</h2>
 
-    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:18px;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:20px;">
         @foreach($products as $product)
-            @include('components.product-card', ['product' => $product])
+            @include('products.card', ['product' => $product])
         @endforeach
     </div>
 @endsection
