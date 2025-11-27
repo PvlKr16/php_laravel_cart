@@ -1,18 +1,16 @@
 <?php
 
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CartController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
+Route::get('/', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 
-Route::get('/', function () {
-    return view('welcome');
-});
+/*
+ Cart API for front-end
+*/
+Route::get('/cart', [CartController::class, 'get'])->name('cart.get');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
