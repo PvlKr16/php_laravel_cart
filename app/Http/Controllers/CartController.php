@@ -37,28 +37,32 @@ class CartController extends Controller
     {
         $cart = $this->getCart();
 
-        // Cart recalculating
         $cart->calculate();
-
         $cart->load('lines.purchasable.product');
 
         return response()->json([
             'id' => $cart->id,
+
             'items' => $cart->lines->map(function ($line) {
 
-                $name = $line->purchasable
-                    ->product
-                    ->translateAttribute('name');
+                $variant = $line->purchasable;
+
+                $priceModel = $variant->prices()->first();
+                $unitCents  = $priceModel?->getRawOriginal('price') ?? 0;
+
+                $totalCents = $unitCents * $line->quantity;
+                $formattedLineTotal = sprintf("$%.2f", $totalCents / 100);
 
                 return [
-                    'id'       => $line->id,
+                    'id' => $line->id,
                     'quantity' => $line->quantity,
-                    'total'    => $line->total?->formatted ?? '',
-                    'product'  => [
-                        'name' => $name,
-                    ],
+                    'line_total' => $formattedLineTotal,
+                    'product' => [
+                        'name' => $variant->product?->translate('name'),
+                    ]
                 ];
             }),
+
             'total' => $cart->total?->formatted ?? '0',
         ]);
     }

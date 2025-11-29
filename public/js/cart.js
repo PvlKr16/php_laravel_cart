@@ -44,7 +44,7 @@
                 <div class="meta">
                     <div class="title">${item.product.name}</div>
                     <div>Quantity: ${item.quantity}</div>
-                    <div>${item.total}</div>
+                    <div>${item.line_total}</div>
                 </div>
 
                 <button data-action="remove" data-id="${item.id}" class="small" style="margin-left:auto;">
@@ -82,8 +82,7 @@
             msg.textContent = data.error ?? "Error";
             return;
         }
-
-        // Обновляем склад на странице
+        // updating stock
         if (data.new_stock !== undefined) {
             updateStockOnPage(variantId, data.new_stock);
         }

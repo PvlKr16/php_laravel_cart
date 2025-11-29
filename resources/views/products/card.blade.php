@@ -10,7 +10,7 @@
 
     <p><strong>Price:</strong> {{ $amount }} USD</p>
     <div id="stock-{{ $variant->id }}">
-        На складе: {{ $variant->stock }}
+        In stock: {{ $variant->stock }}
     </div>
 
     <label>
