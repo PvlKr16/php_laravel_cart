@@ -79,7 +79,7 @@
         const data = await res.json();
 
         if (!res.ok) {
-            msg.textContent = data.error ?? "Ошибка";
+            msg.textContent = data.error ?? "Error";
             return;
         }
 
@@ -114,19 +114,41 @@
     window.updateStockOnPage = function (variantId, newStock) {
         const stockDiv = document.getElementById('stock-' + variantId);
         const qtyInput = document.getElementById('qty-' + variantId);
+        const btn = document.getElementById('btn-' + variantId);
 
+        // updating "Available: "
         if (stockDiv) {
-            stockDiv.textContent = 'На складе: ' + newStock;
+            stockDiv.textContent = 'Available: ' + newStock;
         }
 
+        // updating maximum qty
         if (qtyInput) {
             qtyInput.max = newStock;
 
+            // limit if not enough
             if (parseInt(qtyInput.value) > newStock) {
                 qtyInput.value = newStock;
             }
         }
+
+        // Blocking if not available
+        if (newStock <= 0) {
+            if (qtyInput) qtyInput.disabled = true;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Not available';
+            }
+        } else {
+            if (qtyInput) qtyInput.disabled = false;
+
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Att to cart';
+            }
+        }
     };
+
 
     itemsBox.addEventListener('click', function (e) {
         const btn = e.target.closest('[data-action]');

@@ -9,18 +9,30 @@
     <h3>{{ $product->translateAttribute('name') }}</h3>
 
     <p><strong>Price:</strong> {{ $amount }} USD</p>
-    <div class="stock" id="stock-{{ $variant->id }}">
+    <div id="stock-{{ $variant->id }}">
         На складе: {{ $variant->stock }}
     </div>
 
     <label>
         Quantity:
-        <input type="number" id="qty-{{ $variant->id }}" value="1" min="1" max="{{ $variant->stock }}">
-        <div id="msg-{{ $variant->id }}" style="color:red; font-size:14px;"></div>
+        <input type="number"
+               id="qty-{{ $variant->id }}"
+               value="1"
+               min="1"
+               max="{{ $variant->stock }}"
+            {{ $variant->stock == 0 ? 'disabled' : '' }}
+        >
+        <div
+            id="msg-{{ $variant->id }}" style="color:red; font-size:14px;">
+
+        </div>
     </label>
 
-    <button onclick="addToCartWithQty({{ $variant->id }})">
-        В корзину
+    <button id="btn-{{ $variant->id }}"
+            onclick="addToCartWithQty({{ $variant->id }})"
+        {{ $variant->stock == 0 ? 'disabled' : '' }}
+    >
+        {{ $variant->stock == 0 ? 'Not available' : 'Add to cart' }}
     </button>
 
     <p id="msg-{{ $variant->id }}" style="color:red;"></p>
