@@ -79,17 +79,12 @@ class CartController extends Controller
         if ($variant->stock < $qty) {
             return response()->json([
                 'success' => false,
-                'error' => "Недостаточно товара на складе. Доступно: {$variant->stock}"
+                'error' => "Insufficient qty in stock. Available: {$variant->stock}"
             ], 422);
         }
 
         $cart = $this->getCart();
-
-        $cart->lines()->create([
-            'quantity'         => $qty,
-            'purchasable_type' => ProductVariant::class,
-            'purchasable_id'   => $variant->id,
-        ]);
+        $cart = $cart->add($variant, $qty);
 
         $variant->stock -= $qty;
         $variant->save();
