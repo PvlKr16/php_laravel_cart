@@ -16,7 +16,15 @@ class CartController extends Controller
         $cart = CartSession::current();
 
         if (!$cart) {
-            $cart = CartSession::create();
+            $currency = \Lunar\Models\Currency::where('default', true)->first();
+            $channel  = \Lunar\Models\Channel::where('default', true)->first();
+
+            $cart = \Lunar\Models\Cart::create([
+                'currency_id' => $currency->id,
+                'channel_id'  => $channel->id,
+            ]);
+
+            CartSession::use($cart);
         }
 
         return $cart;
