@@ -57,7 +57,7 @@
         totalBox.textContent = 'Total: ' + data.total;
     }
 
-    window.addToCartWithQty = async function (variantId, maxStock) {
+    window.addToCartWithQty = async function (variantId) {
         const qtyInput = document.getElementById('qty-' + variantId);
         const msg = document.getElementById('msg-' + variantId);
 
@@ -79,8 +79,13 @@
         const data = await res.json();
 
         if (!res.ok) {
-            msg.textContent = data.error ?? "Ошибка добавления.";
+            msg.textContent = data.error ?? "Ошибка";
             return;
+        }
+
+        // Обновляем склад на странице
+        if (data.new_stock !== undefined) {
+            updateStockOnPage(variantId, data.new_stock);
         }
 
         openCart();
@@ -88,7 +93,7 @@
 
 
     window.removeFromCart = async function (lineId) {
-        await fetch('/cart/remove', {
+        const res = await fetch('/cart/remove', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -96,7 +101,31 @@
             },
             body: JSON.stringify({ line_id: lineId })
         });
+
+        const data = await res.json();
+
+        if (data.new_stock !== undefined && data.variant_id !== undefined) {
+            updateStockOnPage(data.variant_id, data.new_stock);
+        }
+
         loadCart();
+    };
+
+    window.updateStockOnPage = function (variantId, newStock) {
+        const stockDiv = document.getElementById('stock-' + variantId);
+        const qtyInput = document.getElementById('qty-' + variantId);
+
+        if (stockDiv) {
+            stockDiv.textContent = 'На складе: ' + newStock;
+        }
+
+        if (qtyInput) {
+            qtyInput.max = newStock;
+
+            if (parseInt(qtyInput.value) > newStock) {
+                qtyInput.value = newStock;
+            }
+        }
     };
 
     itemsBox.addEventListener('click', function (e) {

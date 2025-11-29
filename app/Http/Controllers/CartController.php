@@ -96,7 +96,10 @@ class CartController extends Controller
 
         $cart->calculate();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'new_stock' => $variant->stock
+        ]);
     }
 
     /**
@@ -125,6 +128,10 @@ class CartController extends Controller
 
         $cart->calculate();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'variant_id' => $variant->id,
+            'new_stock' => $variant->stock
+        ]);
     }
 }
