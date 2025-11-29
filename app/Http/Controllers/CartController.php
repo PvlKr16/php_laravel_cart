@@ -69,19 +69,30 @@ class CartController extends Controller
     public function add(Request $request)
     {
         $request->validate([
-            'variant_id' => 'required|integer|exists:lunar_product_variants,id'
+            'variant_id' => 'required|integer|exists:lunar_product_variants,id',
+            'quantity'   => 'nullable|integer|min:1'
         ]);
 
         $variant = ProductVariant::findOrFail($request->variant_id);
+        $qty = $request->quantity ?? 1;
+
+        if ($variant->stock < $qty) {
+            return response()->json([
+                'success' => false,
+                'error' => "Недостаточно товара на складе. Доступно: {$variant->stock}"
+            ], 422);
+        }
 
         $cart = $this->getCart();
 
-        // line adding to cart
         $cart->lines()->create([
-            'quantity'         => 1,
+            'quantity'         => $qty,
             'purchasable_type' => ProductVariant::class,
             'purchasable_id'   => $variant->id,
         ]);
+
+        $variant->stock -= $qty;
+        $variant->save();
 
         $cart->calculate();
 
@@ -99,9 +110,18 @@ class CartController extends Controller
 
         $cart = $this->getCart();
 
-        $cart->lines()
-            ->where('id', $request->line_id)
-            ->delete();
+        $line = $cart->lines()->find($request->line_id);
+
+        if (!$line) {
+            return response()->json(['success' => false], 404);
+        }
+
+        $variant = $line->purchasable;
+
+        $variant->stock += $line->quantity;
+        $variant->save();
+
+        $line->delete();
 
         $cart->calculate();
 

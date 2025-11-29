@@ -57,17 +57,35 @@
         totalBox.textContent = 'Total: ' + data.total;
     }
 
-    window.addToCart = async function (variantId) {
-        await fetch('/cart/add', {
+    window.addToCartWithQty = async function (variantId, maxStock) {
+        const qtyInput = document.getElementById('qty-' + variantId);
+        const msg = document.getElementById('msg-' + variantId);
+
+        const qty = parseInt(qtyInput.value);
+        msg.textContent = '';
+
+        const res = await fetch('/cart/add', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrf
             },
-            body: JSON.stringify({ variant_id: variantId })
+            body: JSON.stringify({
+                variant_id: variantId,
+                quantity: qty
+            })
         });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            msg.textContent = data.error ?? "Ошибка добавления.";
+            return;
+        }
+
         openCart();
     };
+
 
     window.removeFromCart = async function (lineId) {
         await fetch('/cart/remove', {

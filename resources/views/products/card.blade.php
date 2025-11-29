@@ -1,25 +1,25 @@
 @php
     $variant = $product->variants->first();
-    $price = $variant?->prices->first();
+    $price   = $variant->prices->first();
+    $amount  = $price?->price->value / 100;
+    $stock   = $variant->stock;
 @endphp
 
 <div style="border:1px solid #ddd; padding:15px; text-align:center;">
     <h3>{{ $product->translateAttribute('name') }}</h3>
 
-    <p>
-        @if($price)
-            ${{ number_format($price->price->decimal, 2) }}
-        @else
-            <span style="color:#777;">Price is missing</span>
-        @endif
-    </p>
+    <p><strong>Price:</strong> {{ $amount }} USD</p>
+    <p><strong>In stock:</strong> {{ $stock }} pcs</p>
 
-    @if($variant)
-        <button onclick="addToCart({{ $variant->id }})"
-                style="padding:8px 12px; cursor:pointer;">
-            Add to cart
-        </button>
-    @else
-        <p style="color:#999;">No items</p>
-    @endif
+    <label>
+        Quantity:
+        <input type="number" min="1" max="{{ $stock }}" value="1" id="qty-{{ $variant->id }}">
+    </label>
+
+    <button onclick="addToCartWithQty({{ $variant->id }}, {{ $stock }})">
+        Add to cart
+    </button>
+
+    <p id="msg-{{ $variant->id }}" style="color:red;"></p>
+
 </div>
