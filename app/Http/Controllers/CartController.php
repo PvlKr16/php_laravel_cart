@@ -53,12 +53,17 @@ class CartController extends Controller
                 $totalCents = $unitCents * $line->quantity;
                 $formattedLineTotal = sprintf("$%.2f", $totalCents / 100);
 
+//                $name = $variant->product->attribute_data['name']['value']['en'] ?? 'Unnamed';
+                $name = $line->purchasable
+                    ->product
+                    ->translateAttribute('name');
+
                 return [
                     'id' => $line->id,
                     'quantity' => $line->quantity,
                     'line_total' => $formattedLineTotal,
                     'product' => [
-                        'name' => $variant->product?->translate('name'),
+                        'name' => $name,
                     ]
                 ];
             }),
