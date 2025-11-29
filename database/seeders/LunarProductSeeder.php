@@ -12,14 +12,29 @@ use Lunar\Models\Attribute;
 use Lunar\Models\AttributeGroup;
 use Lunar\Models\Language;
 use Lunar\Models\TaxClass;
-use Illuminate\Support\Str;
+use Lunar\Models\TaxRate;
+use Lunar\Models\TaxRateAmount;
+use Lunar\Models\TaxZone;
+use Lunar\Models\Channel;
 
 class LunarProductSeeder extends Seeder
 {
     public function run()
     {
         /**
-         * 1. Currency
+         * Channel
+         */
+        $channel = Channel::firstOrCreate(
+            ['handle' => 'web'],
+            [
+                'name' => 'Web Store',
+                'url' => 'http://localhost',
+                'default' => true,
+            ]
+        );
+
+        /**
+         * Currency
          */
         $currency = Currency::first() ?? Currency::create([
             'name' => 'US Dollar',
@@ -31,43 +46,37 @@ class LunarProductSeeder extends Seeder
         ]);
 
         /**
-         * 2. ProductType
+         * Product type
          */
         $type = ProductType::first() ?? ProductType::create([
             'name' => 'Default Product Type',
         ]);
 
         /**
-         * 3. AttributeGroup
+         * Attribute group
          */
         $group = AttributeGroup::first() ?? AttributeGroup::create([
             'name' => 'Product Main Data',
             'handle' => 'product_main',
             'position' => 1,
-            'attributable_type' => \Lunar\Models\Product::class,
+            'attributable_type' => Product::class,
         ]);
 
         /**
-         * 4. Attributes
+         * Attributes
          */
         $attributes = [
             [
                 'handle' => 'name',
-                'name' => 'Name',
-                'type' => \Lunar\FieldTypes\TranslatedText::class,
+                'name'   => 'Name',
+                'type'   => \Lunar\FieldTypes\TranslatedText::class,
                 'position' => 1,
             ],
             [
                 'handle' => 'description',
-                'name' => 'Description',
-                'type' => \Lunar\FieldTypes\TranslatedText::class,
+                'name'   => 'Description',
+                'type'   => \Lunar\FieldTypes\TranslatedText::class,
                 'position' => 2,
-            ],
-            [
-                'handle' => 'release_date',
-                'name' => 'Release Date',
-                'type' => \Lunar\FieldTypes\Text::class,
-                'position' => 3,
             ],
         ];
 
@@ -75,74 +84,105 @@ class LunarProductSeeder extends Seeder
             $attribute = Attribute::firstOrCreate(
                 ['handle' => $attr['handle']],
                 [
-                    'name' => $attr['name'],
-                    'type' => $attr['type'],
+                    'name'       => $attr['name'],
+                    'type'       => $attr['type'],
                     'attribute_type' => 'product',
                     'attribute_group_id' => $group->id,
-                    'position' => $attr['position'],
-                    'required' => false,
+                    'position'   => $attr['position'],
+                    'required'   => false,
                     'configuration' => [],
-                    'system' => false,
+                    'system'     => false,
                 ]
             );
 
             $type->mappedAttributes()->syncWithoutDetaching([$attribute->id]);
         }
 
-        $language = Language::first() ?? Language::create([
-            'code' => 'en',
-            'name' => 'English',
-            'default' => true,
-        ]);
+        /**
+         * Language
+         */
+        Language::firstOrCreate(
+            ['code' => 'en'],
+            ['name' => 'English', 'default' => true]
+        );
 
         /**
-         * 5. Tax Class
+         * Tax class
          */
-        $taxClass = TaxClass::first() ?? TaxClass::create([
-            'name' => 'Standard Tax',
-            'default' => true,
-        ]);
+        $taxClass = TaxClass::firstOrCreate(
+            ['name' => 'Standard Tax'],
+            ['default' => true]
+        );
 
+        $taxClass->default = true;
+        $taxClass->save();
+
+        $zone = TaxZone::firstOrCreate(
+            ['name' => 'Default Zone'],
+            [
+                'default' => true,
+                'active' => true,
+                'zone_type' => 'country',
+                'price_display' => 'tax_inclusive',
+            ]
+        );
+
+        $rate = TaxRate::firstOrCreate(
+            [
+                'tax_zone_id' => $zone->id,
+                'name' => 'Zero Tax',
+            ],
+            [
+                'priority' => 1,
+            ]
+        );
+
+        TaxRateAmount::firstOrCreate(
+            [
+                'tax_rate_id' => $rate->id,
+                'tax_class_id' => $taxClass->id,
+            ],
+            [
+                'percentage' => 0,
+            ]
+        );
+
+        /**
+         * Goods generating
+         */
         $adjectives = ['fast', 'silent', 'red', 'bold', 'green', 'rapid', 'wild', 'blue', 'lunar', 'dusty'];
         $nouns      = ['falcon', 'mountain', 'river', 'sky', 'tiger', 'forest', 'ocean', 'engine', 'shadow', 'planet'];
 
-        /**
-         * 6. Создаём 3 товара
-         */
-        for ($i = 1; $i <= 3; $i++) {
+        for ($i = 0; $i < 3; $i++) {
 
-            $productName = $adjectives[array_rand($adjectives)]
-                . ' '
-                . $nouns[array_rand($nouns)];
+            $name = ucfirst($adjectives[array_rand($adjectives)]) . ' ' .
+                ucfirst($nouns[array_rand($nouns)]);
 
-            $randomPrice = number_format(rand(500, 1500) / 100, 2, '.', '');
+            $price = rand(5, 15);   // USD dollars
+            $stock = rand(10, 30);  // quantity
 
             $product = Product::create([
                 'status' => 'published',
                 'product_type_id' => $type->id,
                 'attribute_data' => [
                     'name' => new \Lunar\FieldTypes\TranslatedText([
-                        'en' => ucfirst($productName),
+                        'en' => $name
                     ]),
                     'description' => new \Lunar\FieldTypes\TranslatedText([
-                        'en' => 'Autogenerated product description.',
+                        'en' => "Auto-generated product: $name"
                     ]),
-                    'release_date' => new \Lunar\FieldTypes\Text(
-                        now()->toDateString()
-                    ),
                 ],
             ]);
 
-            // Variant
             $variant = ProductVariant::create([
                 'product_id' => $product->id,
-                'sku' => 'TEST-' . Str::upper(Str::random(6)),
+                'sku' => 'SKU-' . strtoupper(substr(md5($name), 0, 6)),
                 'tax_class_id' => $taxClass->id,
+                'stock' => $stock,
             ]);
 
-            // Price
             Price::create([
-                'price' => $randomPrice * 100,
+                'price' => $price * 100, // Lunar stores price in cents
                 'currency_id' => $currency->id,
                 'priceable_type' => ProductVariant::class,
                 'priceable_id' => $variant->id,

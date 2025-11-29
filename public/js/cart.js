@@ -43,46 +43,18 @@
             div.innerHTML = `
                 <div class="meta">
                     <div class="title">${item.product.name}</div>
-                    <div class="qty">
-                        <div style="min-width:28px; text-align:center;">${item.quantity}</div>
-                    </div>
-                    <div style="margin-top:6px; color:#444;">${item.total ?? ''}</div>
+                    <div>Quantity: ${item.quantity}</div>
+                    <div>${item.total}</div>
                 </div>
 
-                <button class="small" data-action="remove" data-id="${item.id}" style="margin-left:auto;">
-                    Delete
+                <button data-action="remove" data-id="${item.id}" class="small" style="margin-left:auto;">
+                    Remove
                 </button>
             `;
             itemsBox.appendChild(div);
         });
 
         totalBox.textContent = 'Total: ' + data.total;
-    }
-
-    // all buttons main processor (+, -, Delete)
-    itemsBox.addEventListener('click', function (e) {
-        const btn = e.target.closest('button[data-action]');
-        if (!btn) return;
-
-        const action = btn.dataset.action;
-        const id = btn.dataset.id;
-
-        if (action === 'remove') {
-            removeItem(id);
-        }
-    });
-
-    async function removeItem(lineId) {
-        await fetch('/cart/remove', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrf
-            },
-            body: JSON.stringify({ line_id: lineId })
-        });
-
-        loadCart();
     }
 
     window.addToCart = async function (variantId) {
@@ -96,4 +68,25 @@
         });
         openCart();
     };
+
+    window.removeFromCart = async function (lineId) {
+        await fetch('/cart/remove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            },
+            body: JSON.stringify({ line_id: lineId })
+        });
+        loadCart();
+    };
+
+    itemsBox.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+
+        if (btn.dataset.action === 'remove') {
+            removeFromCart(btn.dataset.id);
+        }
+    });
 })();

@@ -3,95 +3,99 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Lunar\Facades\CartSession;
 use Lunar\Models\ProductVariant;
-use Lunar\Models\Price;
 
 class CartController extends Controller
 {
-    public function show()
+    /**
+     * Cart getting
+     */
+    private function getCart()
     {
-        $cart = session()->get('cart', []);
+        $cart = CartSession::current();
 
-        $items = [];
-        $total = 0;
-
-        foreach ($cart as $lineId => $line) {
-
-            $variant = ProductVariant::with('product', 'prices')->find($line['variant_id']);
-            if (!$variant) continue;
-
-            $price = $variant->prices->first();
-            $lineTotal = $price->price->decimal * $line['quantity'];
-
-            $items[] = [
-                'id'       => $lineId,
-                'variant_id' => $variant->id,
-                'quantity' => $line['quantity'],
-                'product'  => [
-                    'name' => $variant->product->translateAttribute('name'),
-                    'thumbnail' => null,
-                ],
-                'total'    => '$' . number_format($lineTotal, 2),
-            ];
-
-            $total += $lineTotal;
+        if (!$cart) {
+            $cart = CartSession::create();
         }
 
+        return $cart;
+    }
+
+    /**
+     * Cart showing
+     */
+    public function show()
+    {
+        $cart = $this->getCart();
+
+        // Cart recalculating
+        $cart->calculate();
+
+        $cart->load('lines.purchasable.product');
+
         return response()->json([
-            'items' => $items,
-            'total' => '$' . number_format($total, 2),
+            'id' => $cart->id,
+            'items' => $cart->lines->map(function ($line) {
+
+                $name = $line->purchasable
+                    ->product
+                    ->translateAttribute('name');
+
+                return [
+                    'id'       => $line->id,
+                    'quantity' => $line->quantity,
+                    'total'    => $line->total?->formatted ?? '',
+                    'product'  => [
+                        'name' => $name,
+                    ],
+                ];
+            }),
+            'total' => $cart->total?->formatted ?? '0',
         ]);
     }
 
+    /**
+     * Item adding
+     */
     public function add(Request $request)
     {
-        $variantId = $request->variant_id;
+        $request->validate([
+            'variant_id' => 'required|integer|exists:lunar_product_variants,id'
+        ]);
 
-        if (!$variantId) {
-            return response()->json(['error' => 'variant_id missing'], 400);
-        }
+        $variant = ProductVariant::findOrFail($request->variant_id);
 
-        $cart = session()->get('cart', []);
+        $cart = $this->getCart();
 
-        $lineId = uniqid();
+        // line adding to cart
+        $cart->lines()->create([
+            'quantity'         => 1,
+            'purchasable_type' => ProductVariant::class,
+            'purchasable_id'   => $variant->id,
+        ]);
 
-        $cart[$lineId] = [
-            'variant_id' => $variantId,
-            'quantity'   => 1,
-        ];
-
-        session()->put('cart', $cart);
-
-        return response()->json(['success' => true]);
-    }
-
-    public function update(Request $request)
-    {
-        $lineId = $request->line_id;
-        $qty    = (int)$request->quantity;
-
-        $cart = session()->get('cart', []);
-
-        if (!isset($cart[$lineId])) {
-            return response()->json(['error' => 'line not found'], 404);
-        }
-
-        $cart[$lineId]['quantity'] = max(1, $qty);
-
-        session()->put('cart', $cart);
+        $cart->calculate();
 
         return response()->json(['success' => true]);
     }
 
+    /**
+     * Line deleting
+     */
     public function remove(Request $request)
     {
-        $lineId = $request->line_id;
+        $request->validate([
+            'line_id' => 'required|integer'
+        ]);
 
-        $cart = session()->get('cart', []);
+        $cart = $this->getCart();
 
-        unset($cart[$lineId]);
+        $cart->lines()
+            ->where('id', $request->line_id)
+            ->delete();
 
-        session()->put('cart', $cart);
+        $cart->calculate();
 
         return response()->json(['success' => true]);
     }
